@@ -44,16 +44,16 @@ namespace QuickbaseFileDownloader
 
             var fieldFolderOption = new Option<bool>(
                 name: "--field-label-as-folder-name",
-                description: "Whether to use attachment field name as the containing folder name, rather than the ID."
+                description: "Use the attachment field name as the containing folder name, rather than the ID."
             );
 
             var fieldFolderOptionClean = new Option<bool>(
                 name: "--clean-field-label-as-folder-name",
-                description: "Whether to use attachment field name as the containing folder name, rather than the ID. Special characters removed."
+                description: "Use the attachment field name as the containing folder name, rather than the ID. Special characters removed."
             );
 
             var rootCommand = new RootCommand(
-                "Sample app to download file attachments from a Quickbase table."
+                "Utility to download file attachments from a Quickbase table."
             );
             rootCommand.AddOption(tokenOption);
             rootCommand.AddOption(realmOption);
