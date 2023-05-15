@@ -78,6 +78,9 @@ namespace QuickbaseFileDownloader
             return await rootCommand.InvokeAsync(args);
         }
 
+        private static HttpClient qbClient =
+            new() { BaseAddress = new Uri("https://api.quickbase.com/v1"), };
+
         public static void DownloadFiles(
             string workingPath,
             string qbUserToken,
@@ -102,20 +105,28 @@ namespace QuickbaseFileDownloader
 
             // int recordId = 1277;
 
-            HttpClient fieldDataClient = new HttpClient();
+            // HttpClient fieldDataClient = new HttpClient();
 
-            fieldDataClient.DefaultRequestHeaders.Add(
+            // fieldDataClient.DefaultRequestHeaders.Add(
+            //     "Authorization",
+            //     "QB-USER-TOKEN " + qbUserToken
+            // );
+            // fieldDataClient.DefaultRequestHeaders.Add("QB-Realm-Hostname", qbRealmHostname);
+
+            qbClient.DefaultRequestHeaders.Add(
                 "Authorization",
                 "QB-USER-TOKEN " + qbUserToken
             );
-            fieldDataClient.DefaultRequestHeaders.Add("QB-Realm-Hostname", qbRealmHostname);
+            qbClient.DefaultRequestHeaders.Add("QB-Realm-Hostname", qbRealmHostname);
 
             // Uri fieldMetadataUrl = new System.Uri(fieldMetadataBaseUrl);
 
-            string fieldMetadataUrl = fieldMetadataBaseUrl + "?tableId=" + tableId;
+            // string fieldMetadataUrl = fieldMetadataBaseUrl + "?tableId=" + tableId;
+            string fieldMetadataUrl = "/fields/?tableId=" + tableId;
 
             // var fieldMetadataResponse = fieldDataClient.GetAsync(fieldMetadataUrl).Result;
-            var fieldMetadataResponse = fieldDataClient.GetStringAsync(fieldMetadataUrl).Result;
+            // var fieldMetadataResponse = fieldDataClient.GetStringAsync(fieldMetadataUrl).Result;
+            var fieldMetadataResponse = qbClient.GetStringAsync(fieldMetadataUrl).Result;
             var fieldMetadata = string.Empty;
 
             if (!string.IsNullOrWhiteSpace(fieldMetadataResponse))
@@ -127,7 +138,7 @@ namespace QuickbaseFileDownloader
                 throw new Exception("Error in getting table field data");
             }
 
-            fieldDataClient.Dispose();
+            // fieldDataClient.Dispose();
 
             JsonNode fieldMetadataNode = JsonNode.Parse(fieldMetadata)!;
 
@@ -152,13 +163,17 @@ namespace QuickbaseFileDownloader
                 // WriteIndented = true
             };
 
-            HttpClient jsonClient = new HttpClient();
+            // HttpClient jsonClient = new HttpClient();
 
-            jsonClient.DefaultRequestHeaders.Accept.Add(
+            // jsonClient.DefaultRequestHeaders.Accept.Add(
+            //     new MediaTypeWithQualityHeaderValue("application/json")
+            // );
+            // jsonClient.DefaultRequestHeaders.Add("Authorization", "QB-USER-TOKEN " + qbUserToken);
+            // jsonClient.DefaultRequestHeaders.Add("QB-Realm-Hostname", qbRealmHostname);
+
+            qbClient.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json")
             );
-            jsonClient.DefaultRequestHeaders.Add("Authorization", "QB-USER-TOKEN " + qbUserToken);
-            jsonClient.DefaultRequestHeaders.Add("QB-Realm-Hostname", qbRealmHostname);
 
             List<int> fieldIdsToReturn = attachmentFields.Keys.ToList();
 
@@ -166,7 +181,7 @@ namespace QuickbaseFileDownloader
 
             fieldIdsToReturn.Add(3);
 
-            string jsonString = System.Text.Json.JsonSerializer.Serialize(
+            string fieldRequestJsonString = System.Text.Json.JsonSerializer.Serialize(
                 new RecordQueryRequest
                 {
                     from = tableId,
@@ -179,13 +194,16 @@ namespace QuickbaseFileDownloader
             );
 
             StringContent fieldRequestContent = new StringContent(
-                jsonString,
+                fieldRequestJsonString,
                 Encoding.UTF8,
                 "application/json"
             );
 
-            var recordQueryResponse = jsonClient
-                .PostAsync(recordQueryBaseUrl, fieldRequestContent)
+            // var recordQueryResponse = jsonClient
+            //     .PostAsync(recordQueryBaseUrl, fieldRequestContent)
+            //     .Result;
+            var recordQueryResponse = qbClient
+                .PostAsync("/records/query", fieldRequestContent)
                 .Result;
 
             var fieldData = string.Empty;
@@ -199,7 +217,7 @@ namespace QuickbaseFileDownloader
                 throw new Exception("Error in getting record data");
             }
 
-            jsonClient.Dispose();
+            // jsonClient.Dispose();
 
             // System.IO.Directory.CreateDirectory(
             //                             workingPath
