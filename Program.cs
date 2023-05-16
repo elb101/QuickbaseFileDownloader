@@ -79,9 +79,10 @@ namespace QuickbaseFileDownloader
         }
 
         private static HttpClient qbClient =
-            new() { BaseAddress = new Uri("https://api.quickbase.com/v1"), };
+            new() { BaseAddress = new Uri("https://api.quickbase.com"), };
 
-        public static void DownloadFiles(
+        // public static void 
+        static void DownloadFiles(
             string workingPath,
             string qbUserToken,
             string qbRealmHostname,
@@ -90,9 +91,9 @@ namespace QuickbaseFileDownloader
             bool cleanFieldLabelAsFolderName
         )
         {
-            const string fieldMetadataBaseUrl = "https://api.quickbase.com/v1/fields";
-            const string recordQueryBaseUrl = "https://api.quickbase.com/v1/records/query";
-            const string fileDownloadBaseUrl = "https://api.quickbase.com/v1/files/";
+            // const string fieldMetadataBaseUrl = "https://api.quickbase.com/v1/fields";
+            // const string recordQueryBaseUrl = "https://api.quickbase.com/v1/records/query";
+            // const string fileDownloadBaseUrl = "https://api.quickbase.com/v1/files/";
             // string workingPath;
             // string qbUserToken;
             // string qbRealmHostname;
@@ -113,16 +114,13 @@ namespace QuickbaseFileDownloader
             // );
             // fieldDataClient.DefaultRequestHeaders.Add("QB-Realm-Hostname", qbRealmHostname);
 
-            qbClient.DefaultRequestHeaders.Add(
-                "Authorization",
-                "QB-USER-TOKEN " + qbUserToken
-            );
+            qbClient.DefaultRequestHeaders.Add("Authorization", "QB-USER-TOKEN " + qbUserToken);
             qbClient.DefaultRequestHeaders.Add("QB-Realm-Hostname", qbRealmHostname);
 
             // Uri fieldMetadataUrl = new System.Uri(fieldMetadataBaseUrl);
 
             // string fieldMetadataUrl = fieldMetadataBaseUrl + "?tableId=" + tableId;
-            string fieldMetadataUrl = "/fields/?tableId=" + tableId;
+            string fieldMetadataUrl = "v1/fields?tableId=" + tableId;
 
             // var fieldMetadataResponse = fieldDataClient.GetAsync(fieldMetadataUrl).Result;
             // var fieldMetadataResponse = fieldDataClient.GetStringAsync(fieldMetadataUrl).Result;
@@ -171,9 +169,11 @@ namespace QuickbaseFileDownloader
             // jsonClient.DefaultRequestHeaders.Add("Authorization", "QB-USER-TOKEN " + qbUserToken);
             // jsonClient.DefaultRequestHeaders.Add("QB-Realm-Hostname", qbRealmHostname);
 
-            qbClient.DefaultRequestHeaders.Accept.Add(
-                new MediaTypeWithQualityHeaderValue("application/json")
+            MediaTypeWithQualityHeaderValue jsonTypeHeader = new MediaTypeWithQualityHeaderValue(
+                "application/json"
             );
+
+            qbClient.DefaultRequestHeaders.Accept.Add(jsonTypeHeader);
 
             List<int> fieldIdsToReturn = attachmentFields.Keys.ToList();
 
@@ -203,7 +203,7 @@ namespace QuickbaseFileDownloader
             //     .PostAsync(recordQueryBaseUrl, fieldRequestContent)
             //     .Result;
             var recordQueryResponse = qbClient
-                .PostAsync("/records/query", fieldRequestContent)
+                .PostAsync("v1/records/query", fieldRequestContent)
                 .Result;
 
             var fieldData = string.Empty;
@@ -251,7 +251,7 @@ namespace QuickbaseFileDownloader
                             record![$"{fieldId}"]!["value"]!["url"]!.GetValue<string>()!
                         )
                     )
-
+                    {
                         foreach (
                             var version in record![$"{fieldId}"]!["value"]!["versions"]!.AsArray()!
                         )
@@ -296,7 +296,8 @@ namespace QuickbaseFileDownloader
                                             workingPath,
                                             tableId,
                                             recordId.ToString(),
-                                            fieldId.ToString()
+                                            fieldId.ToString(),
+                                            version!["versionNumber"]!.GetValue<int>()!.ToString()
                                         );
                                     }
 
@@ -319,29 +320,55 @@ namespace QuickbaseFileDownloader
                                         Console.WriteLine(field);
                                         Console.WriteLine(version);
 
-                                        HttpClient fileClient = new HttpClient();
+                                        // HttpClient fileClient = new HttpClient();
 
-                                        fileClient.DefaultRequestHeaders.Add(
-                                            "Authorization",
-                                            "QB-USER-TOKEN " + qbUserToken
-                                        );
-                                        fileClient.DefaultRequestHeaders.Add(
-                                            "QB-Realm-Hostname",
-                                            qbRealmHostname
-                                        );
+                                        // fileClient.DefaultRequestHeaders.Add(
+                                        //     "Authorization",
+                                        //     "QB-USER-TOKEN " + qbUserToken
+                                        // );
+                                        // fileClient.DefaultRequestHeaders.Add(
+                                        //     "QB-Realm-Hostname",
+                                        //     qbRealmHostname
+                                        // );
 
-                                        Uri downloadUrl = new System.Uri(
-                                            fileDownloadBaseUrl
-                                                + tableId
-                                                + "/"
-                                                + recordId
-                                                + "/"
-                                                + fieldId
-                                                + "/"
-                                                + version!["versionNumber"]!.GetValue<int>()!
+                                        qbClient.DefaultRequestHeaders.Accept.Remove(
+                                            jsonTypeHeader
                                         );
 
-                                        var fileDownloadResponse = fileClient
+                                        // Uri downloadUrl = new System.Uri(
+                                        //     fileDownloadBaseUrl
+                                        //         + tableId
+                                        //         + "/"
+                                        //         + recordId
+                                        //         + "/"
+                                        //         + fieldId
+                                        //         + "/"
+                                        //         + version!["versionNumber"]!.GetValue<int>()!
+                                        // );
+                                        // Uri downloadUrl = new System.Uri(
+                                        //     "v1/files/"
+                                        //         + tableId
+                                        //         + "/"
+                                        //         + recordId
+                                        //         + "/"
+                                        //         + fieldId
+                                        //         + "/"
+                                        //         + version!["versionNumber"]!.GetValue<int>()!
+                                        // );
+                                        String downloadUrl =
+                                            "v1/files/"
+                                            + tableId
+                                            + "/"
+                                            + recordId
+                                            + "/"
+                                            + fieldId
+                                            + "/"
+                                            + version!["versionNumber"]!.GetValue<int>()!;
+
+                                        // var fileDownloadResponse = fileClient
+                                        //     .GetAsync(downloadUrl)
+                                        //     .Result;
+                                        var fileDownloadResponse = qbClient
                                             .GetAsync(downloadUrl)
                                             .Result;
                                         var fileBase64 = string.Empty;
@@ -359,31 +386,31 @@ namespace QuickbaseFileDownloader
 
                                         var bytes = Convert.FromBase64String(fileBase64);
 
-                                        fileClient.Dispose();
+                                        // fileClient.Dispose();
 
-                                        // FileStream file = File.Create(
-                                        //     Path.Combine(
-                                        //         directory.FullName,
-                                        //         version!["fileName"]!.GetValue<string>()!
-                                        //     ),
-                                        //     bytes.Length
-                                        // );
                                         FileStream file = File.Create(
                                             Path.Combine(
                                                 directory.FullName,
-                                                "v"
-                                                    + version!["versionNumber"]!.GetValue<int>()!
-                                                    + "_"
-                                                    + version!["fileName"]!.GetValue<string>()!
+                                                version!["fileName"]!.GetValue<string>()!
                                             ),
                                             bytes.Length
                                         );
+                                        // FileStream file = File.Create(
+                                        //     Path.Combine(
+                                        //         directory.FullName,
+                                        //         "v"
+                                        //             + version!["versionNumber"]!.GetValue<int>()!
+                                        //             + "_"
+                                        //             + version!["fileName"]!.GetValue<string>()!
+                                        //     ),
+                                        //     bytes.Length
+                                        // );
 
                                         file.Close();
 
                                         System.IO.File.WriteAllBytes(file.Name, bytes);
 
-                                        /* For Azure upload later */
+                                        /* For Azure upload to implement later */
                                         // using (Stream stream = new MemoryStream(bytes))
                                         // {
                                         //     // Ensure stream is at the beginning
@@ -394,6 +421,7 @@ namespace QuickbaseFileDownloader
                                 }
                             }
                         }
+                    }
                 }
             }
         }
